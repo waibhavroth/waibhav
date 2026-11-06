@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OX Game – You vs AI</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --text: #1f2350;
+    --muted: #6b6f9c;
+    --card: rgba(255, 255, 255, 0.94);
+    --cell: #f1ecff;
+    --x: #ff3d7f;
+    --o: #00b4d8;
+    --accent: #7b2ff7;
+    --win-bg: #ffd60a;
+    --shadow: rgba(40, 20, 90, 0.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --text: #f1f0ff;
+      --muted: #b1aee0;
+      --card: rgba(30, 27, 64, 0.95);
+      --cell: #2c2860;
+      --shadow: rgba(0, 0, 0, 0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --text: #f1f0ff;
+    --muted: #b1aee0;
+    --card: rgba(30, 27, 64, 0.95);
+    --cell: #2c2860;
+    --shadow: rgba(0, 0, 0, 0.5);
+  }
+
+  *, *::before, *::after { box-sizing: inherit; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    color: var(--text);
+    background: linear-gradient(135deg, #6a5cff, #c44dff 35%, #ff6ec4 65%, #ffb347);
+    background-size: 300% 300%;
+    animation: bgShift 14s ease infinite;
+  }
+  @keyframes bgShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  main { width: 100%; max-width: 440px; padding: 28px 16px 12px; flex: 1; }
+  h1 {
+    margin: 0;
+    text-align: center;
+    color: #fff;
+    font-size: clamp(2rem, 8vw, 2.7rem);
+    letter-spacing: 1px;
+    text-shadow: 0 4px 0 rgba(0, 0, 0, 0.18);
+  }
+  .sub { margin: 6px 0 20px; text-align: center; color: #fff; opacity: 0.92; font-weight: 500; }
+
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow: 0 14px 32px var(--shadow);
+  }
+
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .score { color: #fff; border-radius: 16px; padding: 10px 4px; text-align: center; }
+  .score small {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    opacity: 0.95;
+  }
+  .score b { font-size: 1.7rem; }
+  .s-you { background: linear-gradient(135deg, #ff3d7f, #ff8fb1); }
+  .s-draw { background: linear-gradient(135deg, #ff8c00, #ffb703); }
+  .s-ai { background: linear-gradient(135deg, #00b4d8, #48cae4); }
+
+  .status { min-height: 1.6em; margin: 2px 0 14px; text-align: center; font-weight: 800; font-size: 1.1rem; }
+  .status.win { color: #16a34a; }
+  .status.lose { color: var(--x); }
+  .status.ai { color: var(--o); }
+
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; aspect-ratio: 1 / 1; }
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 18px;
+    padding: 0;
+    background: var(--cell);
+    color: inherit;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(2.6rem, 14vw, 4rem);
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .cell:not(:disabled):hover { transform: scale(1.05); filter: brightness(1.08); }
+  .cell:disabled { cursor: default; }
+  .cell.x { color: var(--x); animation: drop 0.3s ease-out; }
+  .cell.o { color: var(--o); animation: drop 0.3s ease-out; }
+  .cell.win { background: var(--win-bg); animation: pop 0.6s ease 2; }
+  @keyframes drop { from { transform: scale(0.4); opacity: 0; } }
+  @keyframes pop { 50% { transform: scale(1.12); } }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .controls label { font-weight: 700; color: var(--muted); }
+  select {
+    font-family: inherit;
+    font-weight: 700;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 2px solid var(--accent);
+    background: var(--card);
+    color: var(--text);
+  }
+  .btn {
+    font-family: inherit;
+    font-weight: 800;
+    border: 0;
+    border-radius: 16px;
+    padding: 14px 22px;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, #7b2ff7, #f107a3);
+    box-shadow: 0 8px 18px rgba(123, 47, 247, 0.35);
+    transition: transform 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(1px); }
+  .btn.replay {
+    width: 100%;
+    margin-top: 16px;
+    font-size: 1.15rem;
+    background: linear-gradient(135deg, #00c9a7, #00b4d8 50%, #7b2ff7);
+    box-shadow: 0 8px 18px rgba(0, 180, 216, 0.35);
+  }
+  .btn.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 2px solid var(--accent);
+    box-shadow: none;
+    padding: 10px 16px;
+  }
+  .btn:focus-visible, select:focus-visible, .cell:focus-visible {
+    outline: 3px solid #ffd60a;
+    outline-offset: 2px;
+  }
+
+  footer {
+    width: 100%;
+    padding: 16px;
+    text-align: center;
+    color: #fff;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  footer b { color: #ffd60a; }
+
+  @media (max-width: 360px) {
+    main { padding-left: 12px; padding-right: 12px; }
+    .card { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>❌ OX Game ⭕</h1>
+  <p class="sub">You (X) vs AI (O) — can you beat the machine?</p>
+
+  <section class="card">
+    <div class="scores">
+      <div class="score s-you"><small>You</small><b id="scoreYou">0</b></div>
+      <div class="score s-draw"><small>Draws</small><b id="scoreDraw">0</b></div>
+      <div class="score s-ai"><small>AI</small><b id="scoreAI">0</b></div>
+    </div>
+
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="board" id="board"></div>
+
+    <div class="controls">
+      <label for="difficulty">AI level:</label>
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard (unbeatable)</option>
+      </select>
+      <button class="btn ghost" id="resetScores">Reset scores</button>
+    </div>
+
+    <button class="btn replay" id="replayBtn">🔁 Replay Game</button>
+  </section>
+</main>
+
+<footer>Website built by <b>Waibhav Roth</b> · © 2026</footer>
+
+<script>
+  const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const $ = id => document.getElementById(id);
+  const boardEl = $('board');
+  const statusEl = $('status');
+  const diffEl = $('difficulty');
+  const cells = [];
+  const scores = { X: 0, O: 0, draw: 0 };
+
+  let board, current, starter = 'O', gameOver, winLine, busy, timer;
+
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('button');
+    cell.className = 'cell';
+    cell.setAttribute('aria-label', 'Square ' + (i + 1));
+    cell.addEventListener('click', () => humanMove(i));
+    boardEl.appendChild(cell);
+    cells.push(cell);
+  }
+
+  // ---------- Game logic ----------
+  function evaluate(b) {
+    for (const [a, c, d] of WIN_LINES) {
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return { winner: b[a], line: [a, c, d] };
+    }
+    return { winner: b.every(Boolean) ? 'draw' : null, line: null };
+  }
+
+  // Minimax: AI is 'O' (maximizer), human is 'X' (minimizer)
+  function minimax(b, turn, depth) {
+    const { winner } = evaluate(b);
+    if (winner === 'O') return 10 - depth;
+    if (winner === 'X') return depth - 10;
+    if (winner === 'draw') return 0;
+
+    const results = [];
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = turn;
+      results.push(minimax(b, turn === 'X' ? 'O' : 'X', depth + 1));
+      b[i] = null;
+    }
+    return turn === 'O' ? Math.max(...results) : Math.min(...results);
+  }
+
+  function bestMove(b) {
+    let best = -Infinity, move = -1;
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = 'O';
+      const score = minimax(b, 'X', 1);
+      b[i] = null;
+      if (score > best) { best = score; move = i; }
+    }
+    return move;
+  }
+
+  function aiMove() {
+    const empty = [];
+    board.forEach((v, i) => { if (!v) empty.push(i); });
+    const randomMove = () => empty[Math.floor(Math.random() * empty.length)];
+    const level = diffEl.value;
+
+    if (level === 'easy' || (level === 'medium' && Math.random() < 0.5)) return randomMove();
+    if (!board.some(Boolean)) return [0, 2, 4, 6, 8][Math.floor(Math.random() * 5)];
+    return bestMove([...board]);
+  }
+
+  // ---------- Turn flow ----------
+  function humanMove(i) {
+    if (busy || gameOver || board[i] || current !== 'X') return;
+    makeMove(i);
+  }
+
+  function makeMove(i) {
+    board[i] = current;
+    const result = evaluate(board);
+    if (result.winner) return finish(result);
+
+    current = current === 'X' ? 'O' : 'X';
+    if (current === 'O') return scheduleAI();
+
+    setStatus('Your turn — tap a square!');
+    render();
+  }
+
+  function scheduleAI() {
+    busy = true;
+    setStatus('AI is thinking…', 'ai');
+    render();
+    timer = setTimeout(() => {
+      busy = false;
+      makeMove(aiMove());
+    }, 700);
+  }
+
+  function finish({ winner, line }) {
+    gameOver = true;
+    winLine = line;
+    if (winner === 'X') {
+      scores.X++;
+      setStatus('You win! 🎉 Great job!', 'win');
+    } else if (winner === 'O') {
+      scores.O++;
+      setStatus('AI wins this round 🤖 Try again!', 'lose');
+    } else {
+      scores.draw++;
+      setStatus('It’s a draw! 🤝');
+    }
+    updateScores();
+    render();
+  }
+
+  function replay() {
+    clearTimeout(timer);
+    busy = false;
+    gameOver = false;
+    winLine = null;
+    board = Array(9).fill(null);
+    starter = starter === 'X' ? 'O' : 'X'; // players take turns opening each round
+    current = starter;
+
+    if (current === 'O') {
+      scheduleAI();
+    } else {
+      setStatus('Your turn — you open this round!');
+      render();
+    }
+  }
+
+  // ---------- Rendering ----------
+  function render() {
+    cells.forEach((cell, i) => {
+      const v = board[i];
+      cell.textContent = v || '';
+      cell.className = 'cell' +
+        (v ? ' ' + v.toLowerCase() : '') +
+        (winLine && winLine.includes(i) ? ' win' : '');
+      cell.disabled = Boolean(v) || gameOver || busy || current !== 'X';
+    });
+  }
+
+  function setStatus(text, tone = '') {
+    statusEl.textContent = text;
+    statusEl.className = 'status ' + tone;
+  }
+
+  function updateScores() {
+    $('scoreYou').textContent = scores.X;
+    $('scoreAI').textContent = scores.O;
+    $('scoreDraw').textContent = scores.draw;
+  }
+
+  // ---------- Events ----------
+  $('replayBtn').addEventListener('click', replay);
+  $('resetScores').addEventListener('click', () => {
+    scores.X = 0;
+    scores.O = 0;
+    scores.draw = 0;
+    updateScores();
+  });
+
+  // Start the first round
+  updateScores();
+  replay();
+</script>
+</body>
+<button onclick="window.location.href='index.html'">
+    Go to Second Website
+</button>
+</html>
