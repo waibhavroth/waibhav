@@ -1,0 +1,294 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Ninja Game</title>
+    <style>
+        
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #ff758c, #ff7eb3, #ffc371);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+}
+
+.game-container {
+    width: 100%;
+    max-width: 750px;
+    background: white;
+    border-radius: 25px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 15px 40px #0003;
+}
+
+h1 {
+    color: #ff4757;
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #777;
+    margin-bottom: 20px;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #fff0e5;
+    padding: 15px;
+    border-radius: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.game-area {
+    height: 380px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    background: linear-gradient(#8be9fd, #b8f7d4);
+    border: 4px solid #fff;
+    touch-action: none;
+}
+
+.welcome {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    padding: 15px;
+    z-index: 5;
+}
+
+.welcome h2 {
+    font-size: 30px;
+    color: #ff4757;
+}
+
+.welcome p {
+    color: #444;
+}
+
+button {
+    border: none;
+    padding: 14px 28px;
+    border-radius: 30px;
+    background: #ff4757;
+    color: white;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #e84118;
+    transform: scale(1.06);
+}
+
+#restartBtn {
+    margin-top: 18px;
+    background: #2ed573;
+}
+
+#restartBtn:hover {
+    background: #20bf6b;
+}
+
+.fruit {
+    position: absolute;
+    font-size: 48px;
+    cursor: crosshair;
+    user-select: none;
+    animation: spin 1.5s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+    50% {
+        rotate: 20deg;
+    }
+}
+
+.footer {
+    margin-top: 18px;
+    color: #888;
+    font-size: 13px;
+}
+
+@media(max-width: 500px) {
+    h1 {
+        font-size: 27px;
+    }
+
+    .game-area {
+        height: 350px;
+    }
+
+    .stats {
+        font-size: 16px;
+    }
+}
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>🍉 FRUIT NINJA 🍊</h1>
+        <p class="subtitle">Slice the fruits, avoid the bombs!</p>
+
+        <div class="stats">
+            <div>🏆 Score: <span id="score">0</span></div>
+            <div>⏰ Time: <span id="time">60</span>s</div>
+        </div>
+
+        <div class="game-area" id="gameArea">
+            <div class="welcome" id="welcome">
+                <h2>Ready to Slice?</h2>
+                <p>Swipe your mouse or finger across fruits!</p>
+                <button id="startBtn">START GAME 🍓</button>
+            </div>
+        </div>
+
+        <button id="restartBtn">🔄 Restart Game</button>
+        <p class="footer">Made with ❤️ waibhav.online</p>
+    </div>
+    <script>
+        
+const gameArea = document.getElementById("gameArea");
+const scoreDisplay = document.getElementById("score");
+const timeDisplay = document.getElementById("time");
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartBtn");
+const welcome = document.getElementById("welcome");
+
+const fruits = ["🍎", "🍊", "🍉", "🍓", "🍍", "🍇", "🥝", "🍌"];
+
+let score = 0;
+let time = 60;
+let playing = false;
+let timer;
+let fruitTimer;
+
+function startGame() {
+    score = 0;
+    time = 60;
+    playing = true;
+
+    scoreDisplay.textContent = score;
+    timeDisplay.textContent = time;
+
+    welcome.style.display = "none";
+    gameArea.querySelectorAll(".fruit").forEach(f => f.remove());
+
+    clearInterval(timer);
+    clearInterval(fruitTimer);
+
+    timer = setInterval(() => {
+        time--;
+        timeDisplay.textContent = time;
+
+        if (time <= 0) {
+            endGame();
+        }
+    }, 1000);
+
+    fruitTimer = setInterval(createFruit, 750);
+}
+
+function createFruit() {
+    if (!playing) return;
+
+    const fruit = document.createElement("div");
+    fruit.className = "fruit";
+    fruit.textContent = fruits[Math.floor(Math.random() * fruits.length)];
+
+    const x = Math.random() * (gameArea.clientWidth - 60) + 30;
+
+    fruit.style.left = x + "px";
+    fruit.style.top = (gameArea.clientHeight + 30) + "px";
+
+    gameArea.appendChild(fruit);
+
+    let y = gameArea.clientHeight + 30;
+
+    const animation = setInterval(() => {
+        if (!playing || !fruit.isConnected) {
+            clearInterval(animation);
+            return;
+        }
+
+        y -= 4;
+        fruit.style.top = y + "px";
+
+        if (y < -60) {
+            fruit.remove();
+            clearInterval(animation);
+        }
+    }, 20);
+
+    fruit.addEventListener("pointerdown", () => sliceFruit(fruit, animation));
+}
+
+function sliceFruit(fruit, animation) {
+    if (!playing || !fruit.isConnected) return;
+
+    score += 10;
+    scoreDisplay.textContent = score;
+
+    const splash = document.createElement("div");
+    splash.textContent = "✨";
+    splash.style.position = "absolute";
+    splash.style.left = fruit.style.left;
+    splash.style.top = fruit.style.top;
+    splash.style.fontSize = "35px";
+
+    gameArea.appendChild(splash);
+
+    setTimeout(() => splash.remove(), 300);
+
+    fruit.remove();
+    clearInterval(animation);
+}
+
+function endGame() {
+    playing = false;
+
+    clearInterval(timer);
+    clearInterval(fruitTimer);
+
+    gameArea.querySelectorAll(".fruit").forEach(f => f.remove());
+
+    welcome.style.display = "flex";
+    welcome.innerHTML = `
+        <h2>🎮 GAME OVER!</h2>
+        <p>Your Final Score: ${score} 🏆</p>
+        <button onclick="startGame()">PLAY AGAIN 🍉</button>
+    `;
+}
+
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", startGame);
+
+    </script>
+</body>
+</html>

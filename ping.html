@@ -1,0 +1,588 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Pong Master - AI Challenge</title>
+    <style>
+        \\\
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+
+    background: linear-gradient(
+        135deg,
+        #667eea,
+        #764ba2,
+        #ff758c
+    );
+}
+
+.container {
+    background: white;
+    width: 100%;
+    max-width: 850px;
+    padding: 25px;
+    border-radius: 25px;
+    text-align: center;
+    box-shadow: 0 15px 40px #0003;
+}
+
+h1 {
+    color: #764ba2;
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #888;
+    margin-bottom: 20px;
+}
+
+.score-board {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: #f2f0ff;
+    padding: 15px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.player h3 {
+    color: #555;
+    font-size: 16px;
+}
+
+.player span {
+    display: block;
+    font-size: 35px;
+    font-weight: bold;
+    color: #764ba2;
+    margin-top: 5px;
+}
+
+.vs {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff4757;
+}
+
+.game-box {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border: 5px solid #764ba2;
+    border-radius: 15px;
+    background: #172554;
+}
+
+canvas {
+    width: 100%;
+    display: block;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: #111827dd;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    gap: 15px;
+    padding: 15px;
+}
+
+.overlay h2 {
+    font-size: 28px;
+    color: #ffd166;
+}
+
+.overlay p {
+    color: #ddd;
+}
+
+button {
+    border: none;
+    padding: 13px 25px;
+    border-radius: 30px;
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    background: linear-gradient(45deg, #ff4757, #ff7f50);
+    transition: 0.3s;
+}
+
+button:hover {
+    transform: scale(1.07);
+    opacity: 0.9;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+#pauseBtn {
+    background: #ffa502;
+}
+
+#restartBtn {
+    background: #2ed573;
+}
+
+.instructions {
+    background: #fff5e6;
+    padding: 15px;
+    border-radius: 15px;
+    line-height: 1.7;
+    color: #555;
+}
+
+.instructions h3 {
+    color: #ff4757;
+    margin-bottom: 5px;
+}
+
+.footer {
+    margin-top: 20px;
+    color: #999;
+    font-size: 13px;
+}
+
+@media(max-width: 550px) {
+    h1 {
+        font-size: 23px;
+    }
+
+    .container {
+        padding: 15px;
+    }
+
+    .player h3 {
+        font-size: 12px;
+    }
+
+    .controls button {
+        padding: 12px 15px;
+        font-size: 12px;
+    }
+}
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>🏓 PING PONG MASTER</h1>
+    <p class="subtitle">Challenge the Computer AI!</p>
+
+    <div class="score-board">
+        <div class="player">
+            <h3>🔵 YOU</h3>
+            <span id="score1">0</span>
+        </div>
+
+        <div class="vs">VS</div>
+
+        <div class="player">
+            <h3>🔴 AI BOT</h3>
+            <span id="score2">0</span>
+        </div>
+    </div>
+
+    <div class="game-box">
+        <canvas id="gameCanvas" width="700" height="400"></canvas>
+
+        <div class="overlay" id="overlay">
+            <h2>🏓 Ready to Play?</h2>
+            <p>Can you defeat the AI?</p>
+            <button id="startBtn">START GAME 🚀</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="pauseBtn">⏸ PAUSE</button>
+        <button id="restartBtn">🔄 RESTART</button>
+    </div>
+
+    <div class="instructions">
+        <h3>🎮 HOW TO PLAY</h3>
+        <p>🔵 You: W / S or ↑ / ↓ Keys</p>
+        <p>🔴 AI: Computer controlled</p>
+        <p>🏆 First to 5 points wins!</p>
+    </div>
+
+    <p class="footer">Made with ❤️ | waibhav.online</p>
+
+</div>
+
+<script>
+    
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const overlay = document.getElementById("overlay");
+
+const score1Display = document.getElementById("score1");
+const score2Display = document.getElementById("score2");
+
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const restartBtn = document.getElementById("restartBtn");
+
+const paddleWidth = 12;
+const paddleHeight = 90;
+const WIN_SCORE = 5;
+
+let score1 = 0;
+let score2 = 0;
+
+let playing = false;
+let paused = false;
+let animationId = null;
+
+const keys = {};
+
+const player = {
+    x: 15,
+    y: 155,
+    speed: 7,
+    color: "#00d2ff"
+};
+
+const ai = {
+    x: canvas.width - 27,
+    y: 155,
+    speed: 4.5,
+    color: "#ff4757"
+};
+
+const ball = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 10,
+    speedX: 5,
+    speedY: 4,
+    color: "#ffd166"
+};
+
+// Keyboard controls
+document.addEventListener("keydown", (e) => {
+    keys[e.key.toLowerCase()] = true;
+
+    if (["ArrowUp", "ArrowDown"].includes(e.key)) {
+        e.preventDefault();
+    }
+});
+
+document.addEventListener("keyup", (e) => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+// Background
+function drawBackground() {
+    ctx.fillStyle = "#172554";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = "#ffffff55";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2, 0);
+    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(
+        canvas.width / 2,
+        canvas.height / 2,
+        55,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.strokeStyle = "#ffffff55";
+    ctx.stroke();
+}
+
+// Draw paddles
+function drawPaddle(paddle) {
+    ctx.fillStyle = paddle.color;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = paddle.color;
+
+    ctx.fillRect(
+        paddle.x,
+        paddle.y,
+        paddleWidth,
+        paddleHeight
+    );
+
+    ctx.shadowBlur = 0;
+}
+
+// Draw ball
+function drawBall() {
+    ctx.beginPath();
+
+    ctx.arc(
+        ball.x,
+        ball.y,
+        ball.radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = ball.color;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = ball.color;
+
+    ctx.fill();
+    ctx.shadowBlur = 0;
+}
+
+// Draw everything
+function drawGame() {
+    drawBackground();
+    drawPaddle(player);
+    drawPaddle(ai);
+    drawBall();
+}
+
+// Human player movement
+function movePlayer() {
+    if (keys["w"] || keys["arrowup"]) {
+        player.y -= player.speed;
+    }
+
+    if (keys["s"] || keys["arrowdown"]) {
+        player.y += player.speed;
+    }
+
+    player.y = Math.max(
+        0,
+        Math.min(canvas.height - paddleHeight, player.y)
+    );
+}
+
+// AI opponent movement
+function moveAI() {
+    let targetY;
+
+    // AI follows the ball when it approaches
+    if (ball.speedX > 0) {
+        targetY = ball.y - paddleHeight / 2;
+    } else {
+        // Return toward the center when ball moves away
+        targetY = canvas.height / 2 - paddleHeight / 2;
+    }
+
+    // AI has limited speed for realistic gameplay
+    const difference = targetY - ai.y;
+
+    if (Math.abs(difference) > 5) {
+        ai.y += Math.sign(difference) *
+                Math.min(Math.abs(difference), ai.speed);
+    }
+
+    ai.y = Math.max(
+        0,
+        Math.min(canvas.height - paddleHeight, ai.y)
+    );
+}
+
+// Reset ball after scoring
+function resetBall(direction) {
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+
+    ball.speedX = 5 * direction;
+    ball.speedY = Math.random() > 0.5 ? 4 : -4;
+}
+
+// Ball movement and collision
+function updateBall() {
+    ball.x += ball.speedX;
+    ball.y += ball.speedY;
+
+    // Top and bottom collision
+    if (
+        ball.y - ball.radius <= 0 ||
+        ball.y + ball.radius >= canvas.height
+    ) {
+        ball.speedY *= -1;
+    }
+
+    // Player collision
+    if (
+        ball.speedX < 0 &&
+        ball.x - ball.radius <= player.x + paddleWidth &&
+        ball.x + ball.radius >= player.x &&
+        ball.y >= player.y &&
+        ball.y <= player.y + paddleHeight
+    ) {
+        ball.speedX = Math.abs(ball.speedX) * 1.05;
+
+        ball.speedY += (
+            ball.y - (player.y + paddleHeight / 2)
+        ) * 0.08;
+
+        ball.x = player.x + paddleWidth + ball.radius;
+    }
+
+    // AI collision
+    if (
+        ball.speedX > 0 &&
+        ball.x + ball.radius >= ai.x &&
+        ball.x - ball.radius <= ai.x + paddleWidth &&
+        ball.y >= ai.y &&
+        ball.y <= ai.y + paddleHeight
+    ) {
+        ball.speedX = -Math.abs(ball.speedX) * 1.05;
+
+        ball.speedY += (
+            ball.y - (ai.y + paddleHeight / 2)
+        ) * 0.08;
+
+        ball.x = ai.x - ball.radius;
+    }
+
+    // Limit ball speed
+    ball.speedX = Math.max(-10, Math.min(10, ball.speedX));
+    ball.speedY = Math.max(-8, Math.min(8, ball.speedY));
+
+    // AI scores
+    if (ball.x < 0) {
+        score2++;
+        score2Display.textContent = score2;
+
+        if (checkWinner()) return;
+
+        resetBall(1);
+    }
+
+    // Player scores
+    if (ball.x > canvas.width) {
+        score1++;
+        score1Display.textContent = score1;
+
+        if (checkWinner()) return;
+
+        resetBall(-1);
+    }
+}
+
+// Check winner
+function checkWinner() {
+    if (score1 >= WIN_SCORE || score2 >= WIN_SCORE) {
+        endGame();
+        return true;
+    }
+
+    return false;
+}
+
+// Main game loop
+function gameLoop() {
+    if (!playing || paused) return;
+
+    movePlayer();
+    moveAI();
+    updateBall();
+    drawGame();
+
+    if (playing && !paused) {
+        animationId = requestAnimationFrame(gameLoop);
+    }
+}
+
+// Start game
+function startGame() {
+    score1 = 0;
+    score2 = 0;
+
+    score1Display.textContent = 0;
+    score2Display.textContent = 0;
+
+    player.y = 155;
+    ai.y = 155;
+
+    resetBall(Math.random() > 0.5 ? 1 : -1);
+
+    playing = true;
+    paused = false;
+
+    overlay.style.display = "none";
+    pauseBtn.textContent = "⏸ PAUSE";
+
+    cancelAnimationFrame(animationId);
+    gameLoop();
+}
+
+// Game over
+function endGame() {
+    playing = false;
+
+    cancelAnimationFrame(animationId);
+
+    const winner = score1 >= WIN_SCORE
+        ? "YOU WIN! 🥳"
+        : "AI WINS! 🤖";
+
+    overlay.style.display = "flex";
+
+    overlay.innerHTML = `
+        <h2>🏆 GAME OVER!</h2>
+        <p>${winner}</p>
+        <p>Final Score: ${score1} - ${score2}</p>
+        <button onclick="startGame()">PLAY AGAIN 🚀</button>
+    `;
+}
+
+// Pause and resume
+function togglePause() {
+    if (!playing) return;
+
+    paused = !paused;
+
+    if (paused) {
+        pauseBtn.textContent = "▶ RESUME";
+        cancelAnimationFrame(animationId);
+    } else {
+        pauseBtn.textContent = "⏸ PAUSE";
+        gameLoop();
+    }
+}
+
+// Button events
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", startGame);
+pauseBtn.addEventListener("click", togglePause);
+
+// Initial screen
+drawGame();
+
+    </script>
+</body>
+</html>
