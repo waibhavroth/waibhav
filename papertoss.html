@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Toss Game</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #6c5ce7, #00cec9);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.game {
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-radius: 25px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 15px 40px #2223;
+}
+
+h1 {
+    color: #6c5ce7;
+    font-size: 30px;
+}
+
+.subtitle {
+    color: #888;
+    margin: 8px 0 20px;
+}
+
+.scoreboard {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.score-box {
+    background: #f0edff;
+    padding: 12px 25px;
+    border-radius: 15px;
+    color: #6c5ce7;
+}
+
+.score-box h2 {
+    font-size: 25px;
+}
+
+.score-box p {
+    font-size: 12px;
+}
+
+.play-area {
+    height: 380px;
+    background: linear-gradient(#dff9fb, #c7ecee);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 3px dashed #81ecec;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.window {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 75px;
+    height: 90px;
+    border: 5px solid #74b9ff;
+    border-radius: 8px;
+    background: #dfefff;
+}
+
+.window::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    height: 100%;
+    border-left: 3px solid #74b9ff;
+}
+
+.window::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    border-top: 3px solid #74b9ff;
+}
+
+.bin {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95px;
+    height: 110px;
+    background: #ff7675;
+    border-radius: 5px 5px 18px 18px;
+    border-top: 12px solid #d63031;
+}
+
+.bin::after {
+    content: "";
+    position: absolute;
+    top: -18px;
+    left: -8px;
+    width: 110px;
+    height: 10px;
+    background: #d63031;
+    border-radius: 10px;
+}
+
+.bin span {
+    display: block;
+    color: white;
+    font-size: 35px;
+    margin-top: 25px;
+}
+
+.paper {
+    position: absolute;
+    width: 35px;
+    height: 35px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px #0002;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: grab;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+    user-select: none;
+}
+
+.wind {
+    position: absolute;
+    top: 25px;
+    left: 15px;
+    color: #0984e3;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.message {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 23px;
+    font-weight: bold;
+    color: #6c5ce7;
+    width: 100%;
+    pointer-events: none;
+}
+
+.controls {
+    margin-top: 20px;
+}
+
+button {
+    border: none;
+    padding: 13px 25px;
+    border-radius: 12px;
+    background: #6c5ce7;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    background: #4834d4;
+    transform: scale(1.04);
+}
+
+.instructions {
+    margin-top: 15px;
+    color: #888;
+    font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+    <h1>🗑️ Paper Toss</h1>
+    <p class="subtitle">Can you score a perfect shot?</p>
+
+    <div class="scoreboard">
+        <div class="score-box">
+            <h2 id="score">0</h2>
+            <p>SCORE</p>
+        </div>
+
+        <div class="score-box">
+            <h2 id="best">0</h2>
+            <p>BEST</p>
+        </div>
+    </div>
+
+    <div class="play-area" id="gameArea">
+
+        <div class="window"></div>
+
+        <div class="wind" id="wind">
+            💨 Wind: 0
+        </div>
+
+        <div class="bin" id="bin">
+            <span>🗑️</span>
+        </div>
+
+        <div class="message" id="message">
+            Let's Play! 🎯
+        </div>
+
+        <div class="paper" id="paper">📄</div>
+
+    </div>
+
+    <div class="controls">
+        <button onclick="restartGame()">↻ Restart Game</button>
+    </div>
+
+    <p class="instructions">
+        👆 Drag the paper backwards and release to throw!
+    </p>
+
+</div>
+
+<script>
+const area = document.getElementById("gameArea");
+const paper = document.getElementById("paper");
+const bin = document.getElementById("bin");
+const scoreText = document.getElementById("score");
+const bestText = document.getElementById("best");
+const message = document.getElementById("message");
+const windText = document.getElementById("wind");
+
+let score = 0;
+let best = Number(localStorage.getItem("paperBest")) || 0;
+let dragging = false;
+let startX = 0;
+let startY = 0;
+let wind = 0;
+let busy = false;
+
+bestText.textContent = best;
+
+function newPaper() {
+    paper.style.transition = "none";
+    paper.style.left = "50%";
+    paper.style.bottom = "25px";
+    paper.style.top = "auto";
+    paper.style.transform = "translateX(-50%)";
+    paper.textContent = "📄";
+    paper.style.opacity = "1";
+}
+
+function setWind() {
+    wind = Math.floor(Math.random() * 9) - 4;
+    windText.textContent = "💨 Wind: " +
+        (wind > 0 ? "+" : "") + wind;
+}
+
+paper.addEventListener("pointerdown", function(e) {
+    if (busy) return;
+
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    paper.setPointerCapture(e.pointerId);
+});
+
+paper.addEventListener("pointermove", function(e) {
+    if (!dragging) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    paper.style.left = `calc(50% + ${dx}px)`;
+    paper.style.bottom = `${25 - dy}px`;
+});
+
+paper.addEventListener("pointerup", function(e) {
+    if (!dragging) return;
+
+    dragging = false;
+
+    const dx = startX - e.clientX;
+    const dy = e.clientY - startY;
+
+    throwPaper(dx, dy);
+});
+
+function throwPaper(dx, dy) {
+    if (busy) return;
+
+    busy = true;
+
+    const rect = area.getBoundingClientRect();
+    const binRect = bin.getBoundingClientRect();
+
+    const power = Math.min(
+        Math.max(Math.hypot(dx, dy), 20), 200
+    );
+
+    const angle = Math.atan2(dy, dx);
+
+    const targetX = rect.width / 2 +
+        Math.sin(angle) * power * 1.5 + wind * 4;
+
+    const targetY = rect.height - 25 -
+        power * 1.3;
+
+    paper.style.transition = "all .65s ease-out";
+    paper.style.left = targetX + "px";
+    paper.style.top = targetY + "px";
+    paper.style.bottom = "auto";
+    paper.style.transform = "translate(-50%, -50%) rotate(720deg)";
+
+    setTimeout(() => {
+        const paperRect = paper.getBoundingClientRect();
+
+        const px = paperRect.left + paperRect.width / 2;
+        const py = paperRect.top + paperRect.height / 2;
+
+        const bx = binRect.left + binRect.width / 2;
+        const by = binRect.top + binRect.height / 2;
+
+        const distance = Math.hypot(px - bx, py - by);
+
+        if (distance < 45 && power > 35) {
+            score++;
+            scoreText.textContent = score;
+
+            message.textContent = "🎉 PERFECT SHOT!";
+
+            if (score > best) {
+                best = score;
+                bestText.textContent = best;
+                localStorage.setItem("paperBest", best);
+            }
+        } else {
+            message.textContent = "😅 Try Again!";
+        }
+
+        setTimeout(() => {
+            newPaper();
+            message.textContent = "Aim & Throw! 🎯";
+            setWind();
+            busy = false;
+        }, 700);
+
+    }, 700);
+}
+
+function restartGame() {
+    score = 0;
+    scoreText.textContent = score;
+    message.textContent = "Let's Play! 🎯";
+    busy = false;
+    dragging = false;
+    newPaper();
+    setWind();
+}
+
+setWind();
+</script>
+
+</body>
+</html>
