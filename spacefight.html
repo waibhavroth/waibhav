@@ -1,0 +1,378 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galaxy Shooter 🚀</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #09002b, #19004d, #32005e);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.game-container {
+    width: 380px;
+    max-width: 95vw;
+    text-align: center;
+}
+
+h1 {
+    font-size: 32px;
+    color: #00f7ff;
+    margin-bottom: 10px;
+    text-shadow: 0 0 15px #00f7ff;
+}
+
+.subtitle {
+    color: #c7b8ff;
+    margin-bottom: 15px;
+}
+
+.score-board {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: #ffffff18;
+    border: 1px solid #ffffff30;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    font-weight: bold;
+}
+
+.game-area {
+    position: relative;
+    height: 500px;
+    background: linear-gradient(#080022, #160044);
+    border: 3px solid #8c4dff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 0 25px #8c4dff80;
+}
+
+.star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle 1.5s infinite alternate;
+}
+
+@keyframes twinkle {
+    from { opacity: 0.2; }
+    to { opacity: 1; }
+}
+
+.player {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 38px;
+    z-index: 3;
+}
+
+.enemy {
+    position: absolute;
+    font-size: 30px;
+    z-index: 2;
+}
+
+.bullet {
+    position: absolute;
+    width: 6px;
+    height: 17px;
+    background: #00ffff;
+    border-radius: 5px;
+    box-shadow: 0 0 12px cyan;
+}
+
+.controls {
+    margin-top: 15px;
+    color: #d7c9ff;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+button {
+    background: linear-gradient(90deg, #ff00cc, #7b2cff);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 30px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 12px;
+    box-shadow: 0 0 15px #ff00cc80;
+}
+
+button:hover {
+    transform: scale(1.06);
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: #080022dd;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.overlay h2 {
+    color: #ff40d6;
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+.overlay p {
+    color: #ddd;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+    <h1>🚀 GALAXY SHOOTER</h1>
+    <p class="subtitle">Defend the galaxy!</p>
+
+    <div class="score-board">
+        <span>⭐ Score: <span id="score">0</span></span>
+        <span>❤️ Lives: <span id="lives">3</span></span>
+    </div>
+
+    <div class="game-area" id="gameArea">
+
+        <div class="player" id="player">🚀</div>
+
+        <div class="overlay" id="startScreen">
+            <h2>SPACE BATTLE</h2>
+            <p>Ready to save the galaxy?</p>
+            <button onclick="startGame()">START GAME</button>
+        </div>
+
+        <div class="overlay hidden" id="gameOver">
+            <h2>GAME OVER!</h2>
+            <p>Your Score: <span id="finalScore">0</span></p>
+            <button onclick="startGame()">PLAY AGAIN</button>
+        </div>
+
+    </div>
+
+    <div class="controls">
+        ⬅️ ➡️ Move spaceship &nbsp; | &nbsp; SPACE 🔫 Shoot
+        <br>
+        Destroy enemies and protect the galaxy!
+    </div>
+
+</div>
+
+<script>
+const gameArea = document.getElementById("gameArea");
+const player = document.getElementById("player");
+
+let score = 0;
+let lives = 3;
+let playerX = 170;
+let bullets = [];
+let enemies = [];
+let gameRunning = false;
+let keys = {};
+let gameLoop;
+let enemyTimer;
+
+const gameWidth = 380;
+
+// Create stars
+for (let i = 0; i < 70; i++) {
+    const star = document.createElement("div");
+    star.className = "star";
+    star.style.left = Math.random() * 100 + "%";
+    star.style.top = Math.random() * 100 + "%";
+    star.style.width = Math.random() * 3 + 1 + "px";
+    star.style.height = star.style.width;
+    gameArea.appendChild(star);
+}
+
+function updatePlayer() {
+    player.style.left = playerX + "px";
+}
+
+document.addEventListener("keydown", (e) => {
+    keys[e.code] = true;
+
+    if (e.code === "Space") {
+        e.preventDefault();
+        if (gameRunning) shoot();
+    }
+});
+
+document.addEventListener("keyup", (e) => {
+    keys[e.code] = false;
+});
+
+function shoot() {
+    const bullet = document.createElement("div");
+    bullet.className = "bullet";
+
+    bullet.style.left = (playerX + 16) + "px";
+    bullet.style.top = "425px";
+
+    gameArea.appendChild(bullet);
+    bullets.push({element: bullet, y: 425});
+}
+
+function createEnemy() {
+    if (!gameRunning) return;
+
+    const enemy = document.createElement("div");
+    enemy.className = "enemy";
+
+    const types = ["👾", "🛸", "👽", "☄️"];
+    enemy.textContent = types[Math.floor(Math.random() * types.length)];
+
+    let x = Math.random() * 330;
+    enemy.style.left = x + "px";
+    enemy.style.top = "-40px";
+
+    gameArea.appendChild(enemy);
+
+    enemies.push({
+        element: enemy,
+        x: x,
+        y: -40
+    });
+}
+
+function updateGame() {
+    if (!gameRunning) return;
+
+    // Player movement
+    if (keys["ArrowLeft"] || keys["KeyA"]) {
+        playerX -= 6;
+    }
+
+    if (keys["ArrowRight"] || keys["KeyD"]) {
+        playerX += 6;
+    }
+
+    playerX = Math.max(0, Math.min(340, playerX));
+    updatePlayer();
+
+    // Move bullets
+    bullets.forEach((bullet, index) => {
+        bullet.y -= 8;
+        bullet.element.style.top = bullet.y + "px";
+
+        if (bullet.y < -20) {
+            bullet.element.remove();
+            bullets.splice(index, 1);
+        }
+    });
+
+    // Move enemies
+    enemies.forEach((enemy, index) => {
+        enemy.y += 2.5;
+        enemy.element.style.top = enemy.y + "px";
+
+        // Enemy reaches player
+        if (enemy.y > 440) {
+            enemy.element.remove();
+            enemies.splice(index, 1);
+            loseLife();
+        }
+    });
+
+    // Bullet collision
+    bullets.forEach((bullet, bi) => {
+        enemies.forEach((enemy, ei) => {
+            if (
+                bullet.y < enemy.y + 30 &&
+                bullet.y > enemy.y - 10 &&
+                bullet.element.offsetLeft > enemy.x - 15 &&
+                bullet.element.offsetLeft < enemy.x + 35
+            ) {
+                bullet.element.remove();
+                enemy.element.remove();
+
+                bullets.splice(bi, 1);
+                enemies.splice(ei, 1);
+
+                score += 10;
+                document.getElementById("score").textContent = score;
+            }
+        });
+    });
+
+    // Game over
+    if (lives <= 0) {
+        endGame();
+    }
+}
+
+function loseLife() {
+    lives--;
+    document.getElementById("lives").textContent = lives;
+}
+
+function startGame() {
+    clearInterval(gameLoop);
+    clearInterval(enemyTimer);
+
+    bullets.forEach(b => b.element.remove());
+    enemies.forEach(e => e.element.remove());
+
+    bullets = [];
+    enemies = [];
+    score = 0;
+    lives = 3;
+    playerX = 170;
+    keys = {};
+
+    document.getElementById("score").textContent = score;
+    document.getElementById("lives").textContent = lives;
+
+    document.getElementById("startScreen").classList.add("hidden");
+    document.getElementById("gameOver").classList.add("hidden");
+
+    updatePlayer();
+    gameRunning = true;
+
+    gameLoop = setInterval(updateGame, 20);
+    enemyTimer = setInterval(createEnemy, 1000);
+}
+
+function endGame() {
+    gameRunning = false;
+
+    clearInterval(gameLoop);
+    clearInterval(enemyTimer);
+
+    document.getElementById("finalScore").textContent = score;
+    document.getElementById("gameOver").classList.remove("hidden");
+}
+</script>
+
+</body>
+</html>

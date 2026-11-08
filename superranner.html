@@ -1,0 +1,372 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Runner Game</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #6c63ff, #ff75a0);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+}
+
+.game-container {
+    width: 100%;
+    max-width: 850px;
+    background: white;
+    padding: 20px;
+    border-radius: 25px;
+    box-shadow: 0 15px 40px #33333340;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+h1 {
+    color: #6c63ff;
+    font-size: 25px;
+}
+
+.score-box {
+    background: #fff0a8;
+    padding: 10px 18px;
+    border-radius: 15px;
+    font-weight: bold;
+    color: #333;
+}
+
+.game-area {
+    height: 350px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    background: linear-gradient(#77d9ff, #c7f5ff);
+}
+
+.cloud {
+    position: absolute;
+    font-size: 45px;
+    animation: clouds 12s linear infinite;
+}
+
+.cloud.one {
+    top: 35px;
+    left: 10%;
+}
+
+.cloud.two {
+    top: 90px;
+    left: 65%;
+    animation-delay: -5s;
+}
+
+@keyframes clouds {
+    from { transform: translateX(400px); }
+    to { transform: translateX(-900px); }
+}
+
+.ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 65px;
+    background: #55cf67;
+    border-top: 8px solid #36ae4e;
+}
+
+.player {
+    position: absolute;
+    bottom: 65px;
+    left: 70px;
+    width: 48px;
+    height: 55px;
+    font-size: 45px;
+    line-height: 55px;
+    z-index: 5;
+}
+
+.jump {
+    animation: jump 0.65s ease-out;
+}
+
+@keyframes jump {
+    0%, 100% { bottom: 65px; }
+    45% { bottom: 190px; }
+}
+
+.obstacle {
+    position: absolute;
+    bottom: 65px;
+    font-size: 42px;
+    z-index: 4;
+}
+
+.coin {
+    position: absolute;
+    bottom: 130px;
+    font-size: 28px;
+    z-index: 4;
+}
+
+.game-controls {
+    text-align: center;
+    padding-top: 18px;
+}
+
+button {
+    border: none;
+    padding: 13px 28px;
+    border-radius: 30px;
+    background: #6c63ff;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #5148df;
+    transform: scale(1.05);
+}
+
+#message {
+    color: #555;
+    margin-bottom: 12px;
+    font-weight: bold;
+}
+
+.instructions {
+    margin-top: 15px;
+    color: #777;
+    text-align: center;
+    font-size: 13px;
+}
+
+@media(max-width: 500px) {
+    .game-area {
+        height: 300px;
+    }
+
+    .player {
+        left: 35px;
+    }
+
+    h1 {
+        font-size: 19px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+    <div class="header">
+        <h1>🏄‍♀️ Super Runner</h1>
+        <div class="score-box">
+            ⭐ Score: <span id="score">0</span>
+        </div>
+    </div>
+
+    <div class="game-area" id="gameArea">
+
+        <div class="cloud one">☁️</div>
+        <div class="cloud two">☁️</div>
+
+        <div class="player" id="player">🏃‍➡️</div>
+
+        <div class="ground"></div>
+
+    </div>
+
+    <div class="game-controls">
+        <p id="message">Ready to run? Let's go! 🎮</p>
+        <button id="startBtn">▶ Start Game</button>
+    </div>
+
+    <div class="instructions">
+        Press SPACE / ↑ or tap the game screen to jump!
+    </div>
+
+</div>
+
+<script>
+const gameArea = document.getElementById("gameArea");
+const player = document.getElementById("player");
+const scoreText = document.getElementById("score");
+const message = document.getElementById("message");
+const startBtn = document.getElementById("startBtn");
+
+let score = 0;
+let running = false;
+let jumping = false;
+let obstacles = [];
+let coins = [];
+let speed = 5;
+let frame = 0;
+let animationId;
+
+function jump() {
+    if (!running || jumping) return;
+
+    jumping = true;
+    player.classList.add("jump");
+
+    setTimeout(() => {
+        player.classList.remove("jump");
+        jumping = false;
+    }, 650);
+}
+
+function createObstacle() {
+    const obstacle = document.createElement("div");
+    obstacle.className = "obstacle";
+    obstacle.innerText = ["🌵", "🪨", "🌳"][
+        Math.floor(Math.random() * 3)
+    ];
+
+    obstacle.style.left = gameArea.offsetWidth + "px";
+    gameArea.appendChild(obstacle);
+    obstacles.push(obstacle);
+}
+
+function createCoin() {
+    const coin = document.createElement("div");
+    coin.className = "coin";
+    coin.innerText = "🪙";
+
+    coin.style.left = gameArea.offsetWidth + "px";
+    coin.style.bottom = (100 + Math.random() * 90) + "px";
+
+    gameArea.appendChild(coin);
+    coins.push(coin);
+}
+
+function collision(a, b) {
+    const r1 = a.getBoundingClientRect();
+    const r2 = b.getBoundingClientRect();
+
+    return (
+        r1.left + 10 < r2.right - 10 &&
+        r1.right - 10 > r2.left + 10 &&
+        r1.top + 10 < r2.bottom - 10 &&
+        r1.bottom - 10 > r2.top + 10
+    );
+}
+
+function gameOver() {
+    running = false;
+    cancelAnimationFrame(animationId);
+
+    message.innerText = "💥 Game Over! Your score: " + score;
+    startBtn.innerText = "🔄 Play Again";
+}
+
+function update() {
+    if (!running) return;
+
+    frame++;
+
+    if (frame % 95 === 0) createObstacle();
+    if (frame % 130 === 0) createCoin();
+
+    // Move obstacles
+    obstacles.forEach((obstacle, index) => {
+        let x = obstacle.offsetLeft - speed;
+        obstacle.style.left = x + "px";
+
+        if (collision(player, obstacle)) {
+            gameOver();
+        }
+
+        if (x < -60) {
+            obstacle.remove();
+            obstacles.splice(index, 1);
+            score += 10;
+        }
+    });
+
+    // Move coins
+    coins.forEach((coin, index) => {
+        let x = coin.offsetLeft - speed;
+        coin.style.left = x + "px";
+
+        if (collision(player, coin)) {
+            score += 20;
+            coin.remove();
+            coins.splice(index, 1);
+        } else if (x < -40) {
+            coin.remove();
+            coins.splice(index, 1);
+        }
+    });
+
+    scoreText.innerText = score;
+
+    // Gradually increase difficulty
+    if (frame % 500 === 0) {
+        speed += 0.5;
+    }
+
+    animationId = requestAnimationFrame(update);
+}
+
+function startGame() {
+    cancelAnimationFrame(animationId);
+
+    obstacles.forEach(o => o.remove());
+    coins.forEach(c => c.remove());
+
+    obstacles = [];
+    coins = [];
+
+    score = 0;
+    speed = 5;
+    frame = 0;
+    jumping = false;
+    running = true;
+
+    player.classList.remove("jump");
+    player.style.bottom = "65px";
+
+    scoreText.innerText = "0";
+    message.innerText = "Keep running! 🏃";
+    startBtn.innerText = "🔄 Restart";
+
+    update();
+}
+
+startBtn.addEventListener("click", startGame);
+
+document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+        e.preventDefault();
+        jump();
+    }
+});
+
+gameArea.addEventListener("pointerdown", jump);
+
+</script>
+
+</body>
+</html>
